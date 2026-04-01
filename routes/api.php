@@ -58,6 +58,7 @@ Route::post('/nguoi-dung/delete', [NguoiDungController::class, 'destroy']);
 Route::post('/nguoi-dung/tim-kiem', [NguoiDungController::class, 'search']);
 Route::post('/nguoi-dung/change-status', [NguoiDungController::class, 'changeStatus']);
 Route::post('/nguoi-dung/login', [NguoiDungController::class, 'login']);
+Route::post('/nguoi-dung/logout', [NguoiDungController::class, 'logout']);
 Route::post('/nguoi-dung/register', [NguoiDungController::class, 'register']);
 // 5.1 Face ID User
 Route::post('/nguoi-dung/xac-thuc-khuon-mat', [NguoiDungController::class, 'xacThucKhuonMat']);
@@ -85,6 +86,8 @@ Route::post('/phong-hop/delete', [PhongHopController::class, 'destroy']);
 Route::post('/phong-hop/tim-kiem', [PhongHopController::class, 'search']);
 Route::post('/phong-hop/change-status', [PhongHopController::class, 'changeStatus']);
 Route::get('/phong-hop/{maPhong}', [PhongHopController::class, 'getByMaPhong']);
+// 8.1 Phòng Họp
+Route::post('/phong-hop/tao-token', [PhongHopController::class, 'taoToken']);
 
 // 9. Chi Tiết Phòng Họp
 Route::get('/chi-tiet-phong-hop/data', [ChiTietPhongHopController::class, 'index']);

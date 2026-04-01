@@ -131,6 +131,16 @@ class NguoiDungController extends Controller
             ]
         ]);
     }
+    public function logout(Request $request)
+    {
+        // Xóa tất cả token của người dùng hiện tại
+        $request->user()->tokens()->delete();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Đăng xuất thành công'
+        ]);
+    }
 
     public function register(Request $request)
     {
@@ -230,7 +240,14 @@ class NguoiDungController extends Controller
      */
     private function tinhToanDistance($vectorA, $vectorB)
     {
-        if (count($vectorA) !== count($vectorB)) return 1.0;
+        // Kiểm tra nếu một trong hai vector bị rỗng hoặc không phải mảng
+        if (!is_array($vectorA) || !is_array($vectorB)) {
+            return 1.0; // Trả về khoảng cách lớn (không khớp) để an toàn
+        }
+
+        if (count($vectorA) !== count($vectorB) || count($vectorA) === 0) {
+            return 1.0;
+        }
 
         $sum = 0;
         for ($i = 0; $i < count($vectorA); $i++) {
