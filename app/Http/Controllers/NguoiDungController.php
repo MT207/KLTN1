@@ -192,40 +192,56 @@ class NguoiDungController extends Controller
             'du_lieu_khuon_mat' => 'required'
         ]);
 
-        // Giải mã Vector mới từ Frontend gửi lên (mảng 128 số)
-        $vector_moi = json_decode($request->du_lieu_khuon_mat);
+        // 2. GIẢI MÃ BẢO MẬT: Thêm tham số 'true' để ép kiểu chắc chắn ra Array (mảng chuẩn) thay vì Object.
+        // Hỗ trợ luôn trường hợp Frontend/Axios tự động ép thành mảng trước khi gửi.
+        $vector_moi = is_string($request->du_lieu_khuon_mat)
+            ? json_decode($request->du_lieu_khuon_mat, true)
+            : $request->du_lieu_khuon_mat;
 
-        // 2. KIỂM TRA TRÙNG LẶP: Quét toàn bộ DB xem mặt này có ai xài chưa
-        // Lấy tất cả user đã có FaceID, ngoại trừ chính người đang quét
+        if (!is_array($vector_moi)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi định dạng dữ liệu sinh trắc học.'
+            ], 400);
+        }
+
+        // 3. KIỂM TRA TRÙNG LẶP (1:N Matching)
         $danh_sach_khac = NguoiDung::whereNotNull('du_lieu_khuon_mat')
             ->where('id', '!=', $request->id)
             ->get();
 
         foreach ($danh_sach_khac as $user_khac) {
-            $vector_cu = json_decode($user_khac->du_lieu_khuon_mat);
+            $vector_cu = is_string($user_khac->du_lieu_khuon_mat)
+                ? json_decode($user_khac->du_lieu_khuon_mat, true)
+                : $user_khac->du_lieu_khuon_mat;
 
-            // Tính khoảng cách giữa mặt mới và mặt trong DB
             $khoang_cach = $this->tinhToanDistance($vector_moi, $vector_cu);
 
-            // Nếu khoảng cách < 0.6 => Hai mặt này là một người
-            if ($khoang_cach < 0.6) {
+            // 4. TINH CHỈNH THRESHOLD:
+            // Hạ ngưỡng từ 0.6 xuống 0.5 để siết chặt bảo mật. (Nhỏ hơn 0.5 chắc chắn là 1 người).
+            // Tránh việc 2 người khác nhau bị nhận diện nhầm (False Positive).
+            if ($khoang_cach < 0.50) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Lỗi! Khuôn mặt này đã được đăng ký'
-                ], 400); // Trả về lỗi 400 để FE bắt được
+                    'message' => 'Lỗi bảo mật! Sinh trắc học này đã được liên kết với một tài khoản khác trong hệ thống.'
+                ], 400);
             }
         }
 
-        // 3. Nếu không trùng thì tiến hành lưu cho User hiện tại
+        // 5. LƯU DỮ LIỆU
         $nguoi_dung = NguoiDung::find($request->id);
 
         if ($nguoi_dung) {
-            $nguoi_dung->du_lieu_khuon_mat = $request->du_lieu_khuon_mat;
+            // Đảm bảo lưu vào DB dưới dạng chuỗi JSON nguyên bản
+            $nguoi_dung->du_lieu_khuon_mat = is_array($request->du_lieu_khuon_mat)
+                ? json_encode($request->du_lieu_khuon_mat)
+                : $request->du_lieu_khuon_mat;
+
             $nguoi_dung->save();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Xác thực khuôn mặt thành công!'
+                'message' => 'Đăng ký Face ID thành công!'
             ]);
         }
 
@@ -240,19 +256,17 @@ class NguoiDungController extends Controller
      */
     private function tinhToanDistance($vectorA, $vectorB)
     {
-        // Kiểm tra nếu một trong hai vector bị rỗng hoặc không phải mảng
-        if (!is_array($vectorA) || !is_array($vectorB)) {
-            return 1.0; // Trả về khoảng cách lớn (không khớp) để an toàn
-        }
-
-        if (count($vectorA) !== count($vectorB) || count($vectorA) === 0) {
+        // Ràng buộc chặt chẽ đầu vào
+        if (!is_array($vectorA) || !is_array($vectorB) || count($vectorA) === 0 || count($vectorA) !== count($vectorB)) {
             return 1.0;
         }
 
         $sum = 0;
         for ($i = 0; $i < count($vectorA); $i++) {
-            $sum += pow($vectorA[$i] - $vectorB[$i], 2);
+            // Ép kiểu float để toán học chính xác 100% khi trừ và bình phương
+            $sum += pow((float)$vectorA[$i] - (float)$vectorB[$i], 2);
         }
+
         return sqrt($sum);
     }
 }

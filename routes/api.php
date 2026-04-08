@@ -85,9 +85,10 @@ Route::post('/phong-hop/update', [PhongHopController::class, 'update']);
 Route::post('/phong-hop/delete', [PhongHopController::class, 'destroy']);
 Route::post('/phong-hop/tim-kiem', [PhongHopController::class, 'search']);
 Route::post('/phong-hop/change-status', [PhongHopController::class, 'changeStatus']);
-Route::get('/phong-hop/{maPhong}', [PhongHopController::class, 'getByMaPhong']);
+Route::get('/phong-hop/ma-phong', [PhongHopController::class, 'getByMaPhong']);
 // 8.1 Phòng Họp
 Route::post('/phong-hop/tao-token', [PhongHopController::class, 'taoToken']);
+Route::post('/phong-hop/kiem-tra-phong-hop', [PhongHopController::class, 'kiemTraPhongHop']);
 
 // 9. Chi Tiết Phòng Họp
 Route::get('/chi-tiet-phong-hop/data', [ChiTietPhongHopController::class, 'index']);

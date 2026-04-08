@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\NguoiDung;
 use App\Models\PhongHop;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\PhanQuyen;
 use Firebase\JWT\JWT;
 use Illuminate\Support\Str;
+use LiveKit\RoomServiceClient;
 
 class PhongHopController extends Controller
 {
@@ -139,7 +141,17 @@ class PhongHopController extends Controller
             'ma_phong' => 'required|string',
             'user_name' => 'required|string'
         ]);
+        $ma_phong = $request->ma_phong;
+        $phong = PhongHop::where('ma_phong', $ma_phong)->first();
+        if (!$phong) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Mã phòng họp không tồn tại!'
+            ], 404);
+        }
 
+        // 1. Lấy thông tin chủ phòng để kiểm tra gói dịch vụ
+        $chu_phong = NguoiDung::find($phong->id_chu_phong);
         // 2. Lấy thông tin bảo mật từ file .env
         $apiKey = env('LIVEKIT_API_KEY');
         $apiSecret = env('LIVEKIT_API_SECRET');
@@ -178,6 +190,23 @@ class PhongHopController extends Controller
                 'status' => false,
                 'message' => 'Lỗi tạo Token: ' . $e->getMessage()
             ], 500);
+        }
+    }
+    public function kiemTraPhongHop(Request $request)
+    {
+        $request->validate([
+            'ma_phong' => 'required'
+        ]);
+        $check_ma_phong = PhongHop::where('ma_phong', $request->ma_phong)->first();
+        if (!$check_ma_phong) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Mã phòng họp "' . $request->ma_phong . '" không tồn tại'
+            ], 404);
+        } else {
+            return response()->json([
+                'status'  => true,
+            ], 200);
         }
     }
 }
